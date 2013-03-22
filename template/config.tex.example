@@ -1,0 +1,5 @@
+\def\theauthor{Ditt Namn} % TODO: stoppa in ditt namn här
+\def\coursename{Introduktion till datalogi}
+\def\course{DD1339}
+\def\groupnumber{1} % TODO: stoppa in gruppnummer här
+\def\courseassistant{Peter Boström} % TODO: stoppa in gruppassistent här
