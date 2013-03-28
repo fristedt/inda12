@@ -1,0 +1,5 @@
+# Which LaTeX version to run (xelatex/pdflatex/etc.)
+LATEX?=xelatex
+
+# Setting extra LATEXFLAGS
+LATEXFLAGS+=-file-line-error
