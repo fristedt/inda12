@@ -43,24 +43,30 @@ func main() {
 func Oracle() chan<- string {
 	questions := make(chan string)
 	answers := make(chan string)
-	// TODO: Answer questions.
+	// Answer questions.
 	go func() {
 		for question := range questions {
 			go prophecy(question, answers)
 		}
 	}()
 
-	// TODO: Make prophecies.
+	// Make prophecies.
 	go func() {
 		for {
 			prophecy("", answers)
 		}
 	}()
-	// TODO: Print answers.
+	// Print answers.
 	go func() {
 		for answer := range answers {
-			fmt.Println("\n" + answer)
-			fmt.Print(prompt)
+			fmt.Print("\n")
+			// Split the answer into characters and print each char with a delay. 
+			chars := strings.Split(answer, "")
+			for _, c := range chars {
+				time.Sleep(time.Duration(rand.Intn(10)) * 10 * time.Millisecond)
+				fmt.Print(c)
+			}
+			fmt.Print("\n" + prompt)
 		}
 	}()
 	return questions
@@ -68,7 +74,7 @@ func Oracle() chan<- string {
 
 // This is the oracle's secret algorithm.
 // It waits for a while and then sends a message on the answer channel.
-// TODO: make it better.
+// make it better.
 func prophecy(question string, answer chan<- string) {
 	// Keep them waiting. Pythia, the original oracle at Delphi,
 	// only gave prophecies on the seventh day of each month.
@@ -88,7 +94,9 @@ func prophecy(question string, answer chan<- string) {
 		"The moon is dark.",
 		"The sun is bright.",
 	}
-	answer <- longestWord + "... " + nonsense[rand.Intn(len(nonsense))]
+	s := longestWord + "... " + nonsense[rand.Intn(len(nonsense))]
+	answer <- s
+
 }
 
 func init() { // Functions called "init" are executed before the main function.

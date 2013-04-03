@@ -1,0 +1,91 @@
+\documentclass[a4paper,10pt,twoside]{article}
+
+\usepackage[inner=3cm,top=3cm,outer=2cm,bottom=3cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\usepackage{fancyvrb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\ifxetex
+	% i xetex behövs inga fulhack för åäö
+\else
+	% åäö-hax för icke-xelatex
+	\usepackage[utf8]{inputenc}
+	% Fixar så man kan ha åäö i kodkommentarer
+	\lstset{literate={ö}{{\"o}}1
+		{ä}{{\"a}}1
+		{å}{{\aa}}1
+		{Ö}{{\"O}}1
+		{Ä}{{\"A}}1
+		{Å}{{\AA}}1
+	}
+\fi
+
+\definecolor{dark-blue}{rgb}{0, 0, 0.6}
+\definecolor{javared}{rgb}{0.6,0,0} % for strings
+\definecolor{javagreen}{rgb}{0.25,0.5,0.35} % comments
+\definecolor{javapurple}{rgb}{0.5,0,0.35} % keywords
+\definecolor{javadocblue}{rgb}{0.25,0.35,0.75} % javadoc
+
+\lstset{language=Java,
+	basicstyle=\ttfamily,
+	% Här anges alltså vilka färger som sak användas.
+	% Vill ni inte ha färger, kommentera ut nästföljande fyra rader.
+	keywordstyle=\color{javapurple}\bfseries,
+	stringstyle=\color{javared},
+	commentstyle=\color{javagreen},
+	morecomment=[s][\color{javadocblue}]{/**}{*/},
+	numbers=left, % Fixar radnumrering i vänstermarginalen
+	numberstyle=\footnotesize,
+	title=\lstname,
+	showstringspaces=false,
+	fancyvrb=true,
+	extendedchars=true,
+	breaklines=true,
+	breakatwhitespace=true,
+	tabsize=4 %Indenteringsstorlek
+}
+
+% Header och footer
+\pagestyle{fancy}\headheight 13pt
+%\lhead{\course\ -\ Inlämning \homeworknumber}
+%\rhead{\theauthor\ -\ \thedate}
+\fancyfoot{}
+\fancyfoot[LE,RO]{\thepage}
+\date{\thedate}
+\author{\theauthor}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\input{config.tex}
+
+% Här börjar inlämningsspecifikt
+\def\homeworknumber{VT9} % TODO: stoppa in vilken hemläxa det är här
+\def\thedate{\today} % Byt ut om du vill ha annat datum på inlämningen
+
+\title{Inlämning \homeworknumber\ - \course\ \coursename}
+
+\begin{document}
+
+% Labbcover + clearpage för blank baksida bakom den
+\input{labbcover.tex}
+\clearpage
+\thispagestyle{empty}
+\mbox{} % empty page for duplex
+\clearpage 
+
+% Huvudinlämning
+\setcounter{page}{1}
+\section{Matching.go}
+\subsection{Vad händer om man tar bort go-kommandot från Seek-anropet i main-funktionen?}
+Eftersom kanalen match har en buffer kommer programmet fortfarande att fungera som förväntat. Det finns dock en liten skillnad. Om vi låter go-kommandot stå kvar finns det ingenting som garanterar ordningen på vem som tar emot vems meddelande eftersom vi inte vet vilken gorutin som körs först. Om vi tar bort go-kommandot kommer ordningen alltid vara Anna till Bob, Cody till Dave och ingen som tar emot Evas. 
+\subsection{Vad händer om man byter deklarationen wg := new(sync.WaitGroup) mot var wg sync.WaitGroup och parametern wg *sync.WaitGroup mot wg sync.WaitGroup?}
+Då kommer vi skicka en kopia av wg till Seek istället för referensen till vår sync.WaitGroup. Detta gör att wg aldrig blir färdig och vi får ett deadlock vid wg.Wait().
+\subsection{Vad händer om man tar bort bufferten på kanalen match?}
+Om vi har ett jämnt antal namn i people kommer allting fungera som vanligt. Däremot kommer det skita sig om vi har ett udda antal namn eftersom den sista gorutinen som kör Seek kommer att vänta på att någon tar emot namnet som skickas till match, och eftersom ingen finns där för att ta emot kommer aldrig den sista wg.Done() kallas, och vi får ett deadlock.
+\subsection{Vad händer om man tar bort default-fallet från case-satsen i main-funktionen?}
+Om vi har ett udda antal namn kommer allting att fungera, men om vi har ett jämnt antal kommer select-kommandot i mainmetoden att vänta på att ta emot någonting från match, och eftersom ingenting skickas till match får vi ett deadlock.
+\end{document}
+
