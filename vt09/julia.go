@@ -4,8 +4,6 @@
 package main
 
 import (
-	"sync"
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -13,7 +11,9 @@ import (
 	"math/cmplx"
 	"os"
 	"strconv"
+	"fmt"
 	"time"
+	"sync"
 	"runtime"
 )
 
@@ -30,22 +30,20 @@ var Funcs []ComplexFunc = []ComplexFunc{
 	func(z complex128) complex128 { return cmplx.Sqrt(cmplx.Sinh(z*z)) + complex(0.065, 0.122) },
 }
 
-var numcpu = runtime.NumCPU()
-
 func init() {
-	runtime.GOMAXPROCS(numcpu) // Try to use all available CPUs.
+	numcpu := runtime.NumCPU()
+runtime.GOMAXPROCS(numcpu) // Try to use all available CPUs.
 }
 
 func main() {
-	fmt.Println("Main started")
-	t := time.Now()
+	now := time.Now()
 	for n, fn := range Funcs {
 		err := CreatePng("picture-"+strconv.Itoa(n)+".png", fn, 1024)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-	fmt.Printf("Time since start: %fs\n", time.Since(t).Seconds())
+	fmt.Printf("Total: %s\n", time.Since(now))
 }
 
 // CreatePng creates a PNG picture file with a Julia image of size n x n.
@@ -55,7 +53,7 @@ func CreatePng(filename string, f ComplexFunc, n int) (err error) {
 		return
 	}
 	defer file.Close()
-	err = png.Encode(file, Julia(f, n))
+	err = png.Encode(file, JuliaSplitX(f, n))
 	return
 }
 
@@ -64,11 +62,30 @@ func Julia(f ComplexFunc, n int) image.Image {
 	bounds := image.Rect(-n/2, -n/2, n/2, n/2)
 	img := image.NewRGBA(bounds)
 	s := float64(n / 4)
+	now := time.Now()
+	for i := bounds.Min.X; i < bounds.Max.X; i++ {
+		for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
+			n := Iterate(f, complex(float64(i)/s, float64(j)/s), 256)
+			r := uint8(0)
+			g := uint8(0)
+			b := uint8(n % 32 * 8)
+			img.Set(i, j, color.RGBA{r, g, b, 255})
+		}
+	}
+	fmt.Printf("1 Procs: %s\n", time.Since(now))
+	return img
+}
+
+// Modified to use two Go routines by splitting the x-axis into two halves and calculating each half in parallel.n
+func JuliaSplitX(f ComplexFunc, n int) image.Image {
+	bounds := image.Rect(-n/2, -n/2, n/2, n/2)
+	img := image.NewRGBA(bounds)
+	s := float64(n / 4)
 	wg := new(sync.WaitGroup)
-	wg.Add(numcpu)
-//	for (routine := 0; routine < numcpu; routines++) {
+	wg.Add(2)
+	now := time.Now()
+	// Split screen into two halves and calculate each half in parallel.
 	go func() {
-		fmt.Println("Go1 started")
 		for i := bounds.Min.X; i < (bounds.Max.X / 2); i++ {
 			for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
 				n := Iterate(f, complex(float64(i)/s, float64(j)/s), 256)
@@ -78,12 +95,11 @@ func Julia(f ComplexFunc, n int) image.Image {
 				img.Set(i, j, color.RGBA{r, g, b, 255})
 			}
 		}
-		fmt.Println("Go1 done")
 		wg.Done()
 	}()
+
 	go func() {
-		fmt.Println("Go2 started")
-		for i := bounds.Max.X / 2; i < bounds.Max.X; i++ {
+		for i := (bounds.Max.X / 2); i < bounds.Max.X; i++ {
 			for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
 				n := Iterate(f, complex(float64(i)/s, float64(j)/s), 256)
 				r := uint8(0)
@@ -92,11 +108,10 @@ func Julia(f ComplexFunc, n int) image.Image {
 				img.Set(i, j, color.RGBA{r, g, b, 255})
 			}
 		}
-		fmt.Println("Go2 done")
 		wg.Done()
 	}()
-//	}
 	wg.Wait()
+	fmt.Printf("2 Procs: %s\n", time.Since(now))
 	return img
 }
 

@@ -87,5 +87,14 @@ Då kommer vi skicka en kopia av wg till Seek istället för referensen till vå
 Om vi har ett jämnt antal namn i people kommer allting fungera som vanligt. Däremot kommer det skita sig om vi har ett udda antal namn eftersom den sista gorutinen som kör Seek kommer att vänta på att någon tar emot namnet som skickas till match, och eftersom ingen finns där för att ta emot kommer aldrig den sista wg.Done() kallas, och vi får ett deadlock.
 \subsection{Vad händer om man tar bort default-fallet från case-satsen i main-funktionen?}
 Om vi har ett udda antal namn kommer allting att fungera, men om vi har ett jämnt antal kommer select-kommandot i mainmetoden att vänta på att ta emot någonting från match, och eftersom ingenting skickas till match får vi ett deadlock.
+
+\section{Julia.go}
+My computer is old and has a Intel Core2Duo processor with each core running at 2.2GHz. Without optimizing the program I got an average time of about 1m8s and I only managed to get that down to about 58s. My method of optimizing consists of splitting the x-axis into two halves and calculating those two halves in parallel. \\
+\\
+One of the complex functions take significantly more time to calculate than the others (it took about 46s on average on my computer, and the second most expensive took 15s). Therefore, I tried letting one processor calculate that one while the other core calculated the rest, figuring that it should make everything complete in the time it took to perform the most expensive function. For some reason, I did not get this to work.
+\lstinputlisting{../julia.go}
+
+\section{Väderstation}
+\lstinputlisting{../client.go}
 \end{document}
 

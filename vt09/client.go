@@ -10,15 +10,15 @@ import (
 
 func main() {
 	server := []string{
-		"http://localhost:8080",
-		"http://localhost:8081",
-		"http://localhost:8082",
+	 	"http://localhost:8080",
+	 	"http://localhost:8081",
+	 	"http://localhost:8082",
 	}
 	for {
 		before := time.Now()
-		res := Get(server[0])
-		//res := Read(server[0], time.Second)
-		//res := MultiRead(server, time.Second)
+		//res := Get(server[0])
+		//res := Read(server[0], 0)
+		res := MultiRead(server, time.Second)
 		after := time.Now()
 		fmt.Println("Response:", *res)
 		fmt.Println("Time:", after.Sub(before))
@@ -52,10 +52,19 @@ func Get(url string) *Response {
 
 // FIXME
 // I've found two insidious bugs in this function; both of them are unlikely
-// to show up in testing. Please fix them right away – and don't forget to
+// to show up in testing. Please fix them right away - and don't forget to
 // write a doc comment this time.
-func Read(url string, timeout time.Duration) (res *Response) {
+
+// Bug 1: Both the main Go routine and the one calling Get() have read access 
+// to res, which could result in a datarace. Could be fixed by changing it so 
+// they do not access the same memory. 
+
+// Read makes a HTTP Get request to the url and returns the response. Status
+// code 200 means success. If the server does not answer within the suppied 
+// timeout Read returns a Response stating timeout with status code 504. 
+func Read(url string, timeout time.Duration) *Response {
 	done := make(chan bool)
+	res := new(Response)
 	go func() {
 		res = Get(url)
 		done <- true
@@ -63,15 +72,29 @@ func Read(url string, timeout time.Duration) (res *Response) {
 	select {
 	case <-done:
 	case <-time.After(timeout):
-		res = &Response{"Gateway timeout\n", 504}
+		return &Response{"Gateway timeout\n", 504}
 	}
-	return
+	return res
 }
 
 // MultiRead makes an HTTP Get request to each url and returns
 // the response of the first server to answer with status code 200.
 // If none of the servers answer before timeout, the response is
-// 503 – Service unavailable.
-func MultiRead(urls []string, timeout time.Duration) (res *Response) {
-	return // TODO
+// 503 - Service unavailable.
+	func MultiRead(urls []string, timeout time.Duration) (res *Response) {
+	var responses = make([]*Response, len(urls))
+	ch := make(chan int)
+	for i, url := range urls {
+		go func() {
+			responses[i] = Get(url)
+			ch <- i
+		}()
+	}
+	select {
+	case i := <-ch:
+		res = responses[i]
+	case <-time.After(timeout):
+		res = &Response{"Service unavailable\n", 503}
+	}
+	return
 }
